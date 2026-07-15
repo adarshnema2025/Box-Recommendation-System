@@ -1,0 +1,77 @@
+In here what i have to do in this assignment
+Architected manual setup guide bypassing Docker dependency
+
+Got it — no Docker, so the local setup section uses the manual Postgres route. Let me write the actual file.
+Created a file, ran a command, read a file
+
+I dropped the Docker Compose section since you're not using it — local setup now walks through manual Postgres install + .env config, matching what you've actually built.
+
+A few placeholders you need to fill in before committing:
+
+    <your-render-url> and the actual endpoint path
+    Repo URL, Python/Django versions
+    Your currency for cost
+    The exact build/start commands you configured in Render's dashboard (mine are a reasonable guess — pip install -r requirements.txt && python manage.py migrate && python manage.py loaddata boxes.json for build, gunicorn box_selector.wsgi:application for start — but confirm against what you actually set)
+    Your project structure tree — update it to match your real file layout
+
+One thing worth double-checking on Render specifically: their free Postgres instances expire after a set period, and the free web service spins down on inactivity (cold start delay on first request). If you're on the free tier, it's worth a one-line note in the README warning the assessor that the first API call might take 30–60 seconds to wake up — otherwise they might think it's broken and give up.
+Readme
+Document · MD 
+
+where is sample box data?
+Identified missing fixture file requirement for documentation
+
+Good catch — the README references boxes.json but I hadn't given you that file separately in this conversation (it was only shown inline earlier as a code block). Let me create it as an actual file so you can drop it straight into your repo.
+Created a file, ran a command, read a file
+
+Where this file needs to live in your repo:
+
+<your-app-name>/fixtures/boxes.json
+
+For example, if your Django app is called boxes, the path would be boxes/fixtures/boxes.json. Django's loaddata command auto-discovers fixtures inside any app's fixtures/ folder, so as long as it's there, python manage.py loaddata boxes.json will find it without needing a full path.
+
+A few things to double check once it's in place:
+
+    The "model": "boxes.box" value must match your actual app_label.modelname (lowercase) — if your app isn't literally named boxes, update this to e.g. "shipping.box" or whatever yours is.
+    Field names (internal_length, max_weight_capacity, etc.) must exactly match your Box model's field names — if you named them differently, the load will fail with a field-mismatch error.
+    Run python manage.py loaddata boxes.json locally once before you push, just to confirm it loads cleanly against your actual model — cheap to catch now versus the assessor hitting it first.
+
+Boxes
+Code · JSON 
+
+i want in readme give command to add these below data using postgresSQL insert command to add below data
+[ {"model": "boxes.box", "pk": 1, "fields": {"serial_no": "BOX-001", "name": "Extra Small", "internal_length": 10, "internal_width": 10, "internal_height": 10, "max_weight_capacity": 1, "cost": 15}}, {"model": "boxes.box", "pk": 2, "fields": {"serial_no": "BOX-002", "name": "Small Mailer", "internal_length": 15, "internal_width": 10, "internal_height": 5, "max_weight_capacity": 2, "cost": 18}}, {"model": "boxes.box", "pk": 3, "fields": {"serial_no": "BOX-003", "name": "Small Cube", "internal_length": 20, "internal_width": 20, "internal_height": 20, "max_weight_capacity": 5, "cost": 28}}, {"model": "boxes.box", "pk": 4, "fields": {"serial_no": "BOX-004", "name": "Medium Standard", "internal_length": 30, "internal_width": 25, "internal_height": 20, "max_weight_capacity": 8, "cost": 40}}, {"model": "boxes.box", "pk": 5, "fields": {"serial_no": "BOX-005", "name": "Medium Flat", "internal_length": 40, "internal_width": 30, "internal_height": 10, "max_weight_capacity": 6, "cost": 35}}, {"model": "boxes.box", "pk": 6, "fields": {"serial_no": "BOX-006", "name": "Medium Cube", "internal_length": 35, "internal_width": 35, "internal_height": 35, "max_weight_capacity": 12, "cost": 55}}, {"model": "boxes.box", "pk": 7, "fields": {"serial_no": "BOX-007", "name": "Large Standard", "internal_length": 50, "internal_width": 40, "internal_height": 30, "max_weight_capacity": 15, "cost": 70}}, {"model": "boxes.box", "pk": 8, "fields": {"serial_no": "BOX-008", "name": "Large Wide", "internal_length": 60, "internal_width": 45, "internal_height": 25, "max_weight_capacity": 18, "cost": 80}}, {"model": "boxes.box", "pk": 9, "fields": {"serial_no": "BOX-009", "name": "Extra Large", "internal_length": 70, "internal_width": 50, "internal_height": 40, "max_weight_capacity": 25, "cost": 110}}, {"model": "boxes.box", "pk": 10, "fields": {"serial_no": "BOX-010", "name": "Heavy Duty", "internal_length": 45, "internal_width": 45, "internal_height": 45, "max_weight_capacity": 30, "cost": 95}}
+Deciphered Django model structure and formatted SQL insert statements
+
+Here's the raw SQL version. Note the table name follows Django's convention: <app_label>_<modelname> in lowercase — so if your app is named boxes and the model is Box, the table is boxes_box. Adjust if yours differs.
+sql
+
+INSERT INTO boxes_box (id, serial_no, name, internal_length, internal_width, internal_height, max_weight_capacity, cost)
+VALUES
+(1,  'BOX-001', 'Extra Small',     10, 10, 10, 1,  15),
+(2,  'BOX-002', 'Small Mailer',    15, 10, 5,  2,  18),
+(3,  'BOX-003', 'Small Cube',      20, 20, 20, 5,  28),
+(4,  'BOX-004', 'Medium Standard', 30, 25, 20, 8,  40),
+(5,  'BOX-005', 'Medium Flat',     40, 30, 10, 6,  35),
+(6,  'BOX-006', 'Medium Cube',     35, 35, 35, 12, 55),
+(7,  'BOX-007', 'Large Standard',  50, 40, 30, 15, 70),
+(8,  'BOX-008', 'Large Wide',      60, 45, 25, 18, 80),
+(9,  'BOX-009', 'Extra Large',     70, 50, 40, 25, 110),
+(10, 'BOX-010', 'Heavy Duty',      45, 45, 45, 30, 95);
+
+One thing to fix before you use this: since you're explicitly inserting id values 1–10, Postgres's auto-increment sequence for that column won't know about them and will still think the next free id is 1. The next row Django creates via the ORM will collide and fail. Reset the sequence right after the insert:
+sql
+
+SELECT setval(pg_get_serial_sequence('boxes_box', 'id'), (SELECT MAX(id) FROM boxes_box));
+
+I'll add both to the README under a new section — here's the update:
+Edited a file, ran a command, read a file
+
+Both options are in there now — fixture as the primary path, raw SQL as the alternative right below it. If your table or app name isn't literally boxes_box, run this to confirm the real name before you commit:
+bash
+
+python manage.py sqlmigrate boxes 0001
+
+That'll print the actual CREATE TABLE statement Django generated, so you can match the INSERT to it exactly.
+Readme
+Document · MD 
