@@ -1,11 +1,11 @@
-# AI-Assisted Box Selection System
+#Box Selection System
 
 A Django-based system that recommends the most suitable shipping box for
 an ecommerce order, based on the combined dimensions and weight of the
 products in that order.
 
-**Live demo:** `<your-render-url>` (e.g. `https://box-selector.onrender.com`)
-**API endpoint:** `POST <your-render-url>/api/recommend-box/`
+**Live demo:** `https://box-recommendation-system-6.onrender.com/api/recommend-box/` 
+**API endpoint:** `POST https://box-recommendation-system-6.onrender.com/api/recommend-box/`
 
 ---
 
@@ -39,9 +39,8 @@ documented as an accepted limitation given the assignment's scope — see
 
 ## Tech stack
 
-- Python `<your version, e.g. 3.11>`
-- Django `<your version>`
-- Django REST Framework `<if used>`
+- Django `4.2.11`
+- Django REST Framework `3.17.1`
 - PostgreSQL
 
 ---
@@ -49,25 +48,35 @@ documented as an accepted limitation given the assignment's scope — see
 ## Project structure
 
 ```
-<update to match your actual layout, e.g.>
-box_selector/
-├── boxes/
-│   ├── models.py          # Box model
-│   ├── views.py           # recommend-box API view
-│   ├── serializers.py     # request/response validation
-│   ├── logic.py           # box selection algorithm
-│   ├── fixtures/
-│   │   └── boxes.json     # 10 sample boxes
-│   └── tests.py
-├── box_selector/
-│   ├── settings.py
-│   └── urls.py
-├── requirements.txt
-├── manage.py
-├── README.md
-├── AI_USAGE.md
-├── TEST_OUTPUT.md
-└── chat_transcript.<md/pdf>
+box_recommender/
+│
+├── .env                     # Local environment variables (database keys, secret keys, etc.)
+├── .gitignore               # Specifying files and folders untracked by Git (e.g., .venv, *.pyc)
+├── db.sqlite3               # Local SQLite database (if used for development)
+├── manage.py                # Django CLI utility for administrative tasks
+├── requirements.txt         # Project dependencies
+│
+├── box_recommender/         # Project configuration directory
+│   ├── __init__.py          # Marks the directory as a Python package
+│   ├── asgi.py              # ASGI configuration for asynchronous web servers
+│   ├── settings.py          # Main settings and configuration for the Django project
+│   ├── test_settings.py     # Configurations used specifically for running tests
+│   ├── urls.py              # Root URL routing definitions
+│   └── wsgi.py              # WSGI configuration for deployment
+│
+└── boxes/                   # Core Django application for the box recommendation system
+    ├── __init__.py          # Marks the application directory as a Python package
+    ├── admin.py             # Admin panel registrations for the Box model
+    ├── apps.py              # Application configuration
+    ├── models.py            # Database schemas/models (e.g., Box model definitions)
+    ├── serializers.py       # DRF Serializers for request/response validation (RecommendBoxRequestSerializer)
+    ├── tests.py             # Test cases for views, models, and recommendation logic
+    ├── urls.py              # App-specific URL routes (e.g., /api/recommend-box/)
+    ├── views.py             # Core views/API endpoints (e.g., RecommendBoxView)
+    └── migrations/          # Database migrations history
+        ├── __init__.py
+        └── 0001_initial.py  # Initial migration schema for the Box table
+
 ```
 
 ---
@@ -85,14 +94,14 @@ box_selector/
 ### 1. Clone the repo
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo-name>
+git clone https://github.com/adarshnema2025/Box-Recommendation-System.git
+cd Box-Recommendation System
 ```
 
 ### 2. Create a virtual environment
 
 ```bash
-python -m venv venv
+python -m venv .venv
 source venv/bin/activate      # Windows: venv\Scripts\activate
 ```
 
@@ -108,9 +117,9 @@ pip install -r requirements.txt
 psql postgres
 ```
 ```sql
-CREATE DATABASE boxdb;
-CREATE USER boxuser WITH PASSWORD 'boxpass';
-GRANT ALL PRIVILEGES ON DATABASE boxdb TO boxuser;
+CREATE DATABASE tradexadb;
+CREATE USER postgres WITH PASSWORD 'password';
+GRANT ALL PRIVILEGES ON DATABASE tradexadb TO postgres;
 \q
 ```
 
@@ -124,13 +133,12 @@ cp .env.example .env
 
 `.env.example`:
 ```
-DB_NAME=boxdb
-DB_USER=boxuser
-DB_PASSWORD=boxpass
+DB_NAME=tradexadb or  whatever you name it
+DB_USER=postgres or  whatever you put in
+DB_PASSWORD=password or whatever you put in
 DB_HOST=localhost
 DB_PORT=5432
-SECRET_KEY=<your-secret-key>
-DEBUG=True
+
 ```
 
 ### 6. Run migrations
@@ -141,24 +149,18 @@ python manage.py migrate
 
 ### 7. Load sample box data (10 boxes)
 
-**Option A — Django fixture (recommended):**
-
-```bash
-python manage.py loaddata boxes.json
-```
-
-**Option B — raw SQL (if you prefer inserting directly via psql):**
+Raw SQL :
 
 Connect to your database:
 
 ```bash
-psql -U boxuser -d boxdb -h localhost
+psql -U postgres -d tradexadb -h localhost
 ```
 
 Then run:
 
 ```sql
-INSERT INTO boxes_box (id, serial_no, name, internal_length, internal_width, internal_height, max_weight_capacity, cost)
+INSERT INTO box (id, serial_no, name, internal_length, internal_width, internal_height, max_weight_capacity, cost)
 VALUES
 (1,  'BOX-001', 'Extra Small',     10, 10, 10, 1,  15),
 (2,  'BOX-002', 'Small Mailer',    15, 10, 5,  2,  18),
@@ -173,11 +175,11 @@ VALUES
 
 -- Reset the auto-increment sequence so future Django-created rows
 -- don't collide with these manually inserted IDs
-SELECT setval(pg_get_serial_sequence('boxes_box', 'id'), (SELECT MAX(id) FROM boxes_box));
+SELECT setval(pg_get_serial_sequence('box', 'id'), (SELECT MAX(id) FROM box));
 ```
 
 > Table name follows Django's convention `<app_label>_<model_name>` in
-> lowercase (`boxes_box` here) — adjust if your app or model name
+> lowercase (`box` here) — adjust if your app or model name
 > differs. Run `python manage.py migrate` (step 6) before this step so
 > the table exists.
 
@@ -238,14 +240,6 @@ Content-Type: application/json
 
 ---
 
-## Running tests
-
-```bash
-python manage.py test
-```
-
-Test run output is captured in [`TEST_OUTPUT.md`](./TEST_OUTPUT.md)
-(or see the GitHub Actions run: `<link if using CI>`).
 
 ---
 
@@ -254,21 +248,13 @@ Test run output is captured in [`TEST_OUTPUT.md`](./TEST_OUTPUT.md)
 This project is deployed on [Render](https://render.com) as a Web
 Service, with a Render-managed PostgreSQL instance.
 
-- **Build command:** `pip install -r requirements.txt && python manage.py migrate && python manage.py loaddata boxes.json`
-- **Start command:** `gunicorn box_selector.wsgi:application`
+- **Build command:** `pip install -r requirements.txt`
+- **Start command:** `gunicorn box_recommender.wsgi:application`
 - **Environment variables set on Render:** `DATABASE_URL` (auto-provided
   by Render's Postgres add-on), `SECRET_KEY`, `DEBUG=False`,
-  `ALLOWED_HOSTS=<your-render-domain>`
+  
 
 ---
 
 ## Other files in this repo
 
-- [`AI_USAGE.md`](./AI_USAGE.md) — AI tools used, prompts, what was
-  accepted/rejected, mistakes found, and how the final code was verified.
-- `chat_transcript.<ext>` — exported chat transcript (written without AI
-  assistance, as required).
-- `LEARNINGS.md` — reflection on what was learned in this assignment
-  (written without AI assistance, as required).
-- [`TEST_OUTPUT.md`](./TEST_OUTPUT.md) — terminal output from the test
-  run.
