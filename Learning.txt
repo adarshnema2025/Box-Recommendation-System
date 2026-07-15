@@ -1,0 +1,5 @@
+1.Previously made many projects but by this project i learn how to think and code for real usecase that are usually used in real world.
+2.Learn how to use AI as a helper with whom i consult about overview of the project,structure,design decisions,edge cases.
+3.Learn and did handson project that really taught me so much and really enjoyed doing it 
+4.Deploying the backend on render taught me almost everything about deploying django project the requirement.txt,version mismatch and i am really looking forwared to learn docked to ease and solve this problem
+5.Also learn about your wonderful company about how its an omnichannel commerce platform enabling brands and retailers to efficiently manage e-commerce, inventory, customer relationships, logistics, and business operations from a single system also read the interview of founder on "the Print"
